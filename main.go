@@ -11,7 +11,7 @@ import (
 
 var watcher *fsnotify.Watcher
 
-func spawnProcess()  *os.Process {
+func spawnProcess() *os.Process {
 	cmd := exec.Command("java", "-jar", "wiremock-standalone-2.19.0.jar", "--port", "8082", "--global-response-templating")
 	cmd.Stdout = os.Stdout
 	err := cmd.Start()
@@ -21,19 +21,16 @@ func spawnProcess()  *os.Process {
 	return cmd.Process
 }
 
-func kill(process *os.Process)  {
+func kill(process *os.Process) {
 	if err := process.Kill(); err != nil {
 		log.Fatal("failed to kill process: ", err)
 	}
 }
 
-
 // see https://medium.com/@skdomino/watch-this-file-watching-in-go-5b5a247cf71f
 func main() {
 
-
 	var currentProcess = spawnProcess()
-
 
 	// creates a new file watcher
 	watcher, _ = fsnotify.NewWatcher()
@@ -57,15 +54,11 @@ func main() {
 			select {
 			// watch for events
 			case event := <-watcher.Events:
-				if event.Op == fsnotify.Remove {
-					fmt.Printf("EVENT! %#v\n", event)
-					kill(currentProcess)
-					currentProcess = spawnProcess()
-					fmt.Printf("restarted wiremock")
-					// watch for errors
-				} else {
-					fmt.Printf("ignored %v", event.Op)
-				}
+				fmt.Printf("EVENT! %#v\n", event)
+				kill(currentProcess)
+				currentProcess = spawnProcess()
+				fmt.Printf("restarted wiremock")
+				// watch for errors
 			case err := <-watcher.Errors:
 				fmt.Println("ERROR", err)
 			}

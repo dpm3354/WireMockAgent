@@ -1,8 +1,31 @@
-# A (really) quick and dirty wiremock agent
+# A (really) quick and dirty process agent
 
-This application manages the execution of "wiremock-standalone-2.19.0.jar" in the path relative to the current binary
-It will restart this process when it detects changes made the directory provided as the first argument. 
+This application will conditionally restart processes when specified directories have changed.
 
+## Configuration
+
+In order to properly setup the agent you will need to define:
+
+1. a process alias (label)
+2. a directory to monitor
+3. the name of the process to manage
+4. the arguments to supply the process
+5. supply a config.yml where the above is defined. By default the mock agent assumes a `config.json` exists in the same
+dir as the binary
+
+        {
+              "alias" : "wiremock",
+              "monitor": "mappings",
+              "command" : "java",
+              "arguments": [
+                "-jar", "wiremock-standalone-2.19.0.jar", "--port", "8082", "--global-response-templating"
+              ]
+        }
+
+## Example
+
+    ./wire-mock-agent config.json
+    
 ## Building 
 
 ### For yourself
@@ -31,15 +54,9 @@ It will restart this process when it detects changes made the directory provided
     GOOS=windows GOARCH=amd64 go build
 
   
-
-
 ## TODO
 
 * Error handling is essentially absent. Will be addressed later  
-* Include CLI Output
-
-## Example
-
-    # will execute "java -jar ./wiremock-standalone-2.19.0.jar --port 8082 --global-response-templating"
-    # and restart it as changes happen in mappings/
-    ./wire-mock-agent mappings/
+* Rename App
+* More Functionality?
+* Better App Name

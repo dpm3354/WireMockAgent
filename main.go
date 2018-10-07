@@ -1,8 +1,10 @@
 package main
 
 import (
+	json "encoding/json"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -11,8 +13,16 @@ import (
 
 var watcher *fsnotify.Watcher
 
-func spawnProcess() *os.Process {
-	cmd := exec.Command("java", "-jar", "wiremock-standalone-2.19.0.jar", "--port", "8082", "--global-response-templating")
+type ProcessConfiguration struct {
+	Alias     string   `json:"alias"`
+	Monitor   string   `json:"monitor"`
+	Command   string   `json:"command"`
+	Arguments []string `json:"arguments"`
+}
+
+func spawnProcess(name string, arg ...string) *os.Process {
+	log.Printf("Starting \"%v\" with following args: \"%v\"", name, arg)
+	cmd := exec.Command(name, arg...)
 	cmd.Stdout = os.Stdout
 	err := cmd.Start()
 	if err != nil {
@@ -27,10 +37,41 @@ func kill(process *os.Process) {
 	}
 }
 
+func getProcessConfiguration() *ProcessConfiguration {
+
+	var config string
+
+	if len(os.Args) == 1 {
+		config = "config.json"
+	} else {
+		config = os.Args[1]
+	}
+
+	jsonFile, err := os.Open(config)
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+
+
+	var managedProcess = ProcessConfiguration{}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+
+	err = json.Unmarshal(byteValue, &managedProcess)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+	return &managedProcess
+}
+
 // see https://medium.com/@skdomino/watch-this-file-watching-in-go-5b5a247cf71f
 func main() {
 
-	var currentProcess = spawnProcess()
+	processConfiguration := *getProcessConfiguration()
+
+
+	var currentProcess = spawnProcess(processConfiguration.Command, processConfiguration.Arguments...)
 
 	// creates a new file watcher
 	watcher, _ = fsnotify.NewWatcher()
@@ -38,11 +79,10 @@ func main() {
 
 	// starting at the root of the project, walk each file/directory searching for
 	// directories
-	path := os.Args[1]
-	if err := filepath.Walk(path, watchDir); err != nil {
+	if err := filepath.Walk(processConfiguration.Monitor, watchDir); err != nil {
 		fmt.Println("ERROR", err)
 	} else {
-		fmt.Printf("monitoring %v", path)
+		fmt.Printf("monitoring %v", processConfiguration.Monitor)
 	}
 
 	//
@@ -56,8 +96,8 @@ func main() {
 			case event := <-watcher.Events:
 				fmt.Printf("EVENT! %#v\n", event)
 				kill(currentProcess)
-				currentProcess = spawnProcess()
-				fmt.Printf("restarted wiremock")
+				currentProcess = spawnProcess(processConfiguration.Command, processConfiguration.Arguments...)
+				fmt.Printf("restarted \"%V\"", processConfiguration.Alias)
 				// watch for errors
 			case err := <-watcher.Errors:
 				fmt.Println("ERROR", err)

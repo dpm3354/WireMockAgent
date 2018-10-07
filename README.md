@@ -13,6 +13,8 @@ In order to properly setup the agent you will need to define:
 5. supply a config.yml where the above is defined. By default the mock agent assumes a `config.json` exists in the same
 dir as the binary
 
+### Example Configuration
+
         {
               "alias" : "wiremock",
               "monitor": "mappings",
@@ -22,9 +24,9 @@ dir as the binary
               ]
         }
 
-## Example
+## Running
 
-    ./wire-mock-agent config.json
+    ./wiremock-agent
     
 ## Building 
 
